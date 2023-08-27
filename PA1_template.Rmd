@@ -1,0 +1,126 @@
+---
+title: "course-project-1"
+author: "Michał Sawicki"
+date: "2023-08-25"
+output: html_document
+---
+``` {r message=FALSE}
+library(dplyr)
+library(scales)
+Sys.setlocale("LC_TIME", "en_US.UTF-8")
+```
+## **Loading and preprocessing the data**
+
+### Read the data...
+```{r}
+data_activities <- read.csv("activity.csv")
+head(data_activities)
+```
+## **What is mean total number of steps taken per day?**
+
+### Calculate the total number of steps taken per day
+```{r}
+steps_per_day <- data_activities %>% group_by(date) %>% summarize(sum(steps, na.rm=TRUE))
+colnames(steps_per_day) <- c("day", "number_of_steps")
+head(steps_per_day)
+```
+
+### Histogram of the total number of steps taken each day
+```{r}
+hist(steps_per_day$number_of_steps, col="steelblue", xlab="Number of Steps", main="")
+```
+
+### Mean and median of the total number of steps taken per day
+```{r}
+mean(steps_per_day$number_of_steps)
+median(steps_per_day$number_of_steps)
+```
+
+## **What is the average daily activity pattern?**
+
+### Calculate the average number of steps taken from 5 minutes intervals
+```{r}
+steps_per_interval <- data_activities %>% group_by(interval) %>% summarize(mean(steps, na.rm=TRUE))
+colnames(steps_per_interval) <- c("time_interval", "average_number_of_steps")
+head(steps_per_interval)
+```
+
+### Time series plot of the 5-minute interval and the average number of steps taken
+```{r}
+plot(steps_per_interval$time_interval, steps_per_interval$average_number_of_steps, type="l", xlab="Minute of a Day", ylab="Average Number of Steps")
+```
+
+#### According this data... day is more than 1440 minutes long.
+
+### Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+```{r}
+max_steps <- max(steps_per_interval$average_number_of_steps)
+filter(steps_per_interval, average_number_of_steps == max_steps)
+```
+
+## **Imputing missing values**
+
+### The total number of missing values in the dataset
+```{r}
+steps <- data_activities$steps
+nums_of_missing <- sum(is.na(steps))
+total <- length(data_activities$steps)
+nums_of_missing
+```
+
+### Fill in the missing data with the average value and create a new data set
+```{r}
+data_activities$steps[is.na(data_activities$steps)] <- mean(data_activities$steps, na.rm=TRUE)
+head(data_activities)
+```
+
+###  A histogram of the total number of steps taken each day
+```{r}
+steps_per_day <- data_activities %>% group_by(date) %>% summarize(sum(steps, na.rm=TRUE))
+colnames(steps_per_day) <- c("day", "number_of_steps")
+hist(steps_per_day$number_of_steps, col="steelblue", xlab="Number of Steps", main="")
+```
+
+### Mean and median of the total number of steps taken per day
+```{r}
+mean(steps_per_day$number_of_steps)
+median(steps_per_day$number_of_steps)
+```
+
+#### Completing the missing data with the average value has a significant impact on the data parameters because the percentage of values is high and is about:
+```{r}
+percent(nums_of_missing/total)
+```
+
+## **Are there differences in activity patterns between weekdays and weekends?**
+```{r}
+data_activities$date <- weekdays(as.Date(data_activities$date))
+colnames(data_activities) <- c("steps", "day_of_week", "interval")
+
+data_activities <- data_activities %>%
+  mutate(day_type = case_when(
+    day_of_week %in% c("Monday", "Thuesday", "Wednesday", "Thuesday", "Friday") ~ "weekday",
+    day_of_week %in% c("Saturday", "Sunday") ~ "weekend"
+  ))
+head(data_activities)
+```
+
+```{r}
+data_weekday <- filter(data_activities, day_type =="weekday")
+data_weekend <- filter(data_activities, day_type == "weekend")
+
+steps_per_interval_weekday <- data_weekday %>% group_by(interval) %>% summarize(mean(steps, na.rm=TRUE))
+colnames(steps_per_interval_weekday) <- c("time_interval", "average_number_of_steps")
+steps_per_interval_weekend <- data_weekend %>% group_by(interval) %>% summarize(mean(steps, na.rm=TRUE))
+colnames(steps_per_interval_weekend) <- c("time_interval", "average_number_of_steps")
+head(steps_per_interval_weekday)
+```
+
+## Plot of average step activities (during the weekdays and weekends)
+```{r}
+plot(steps_per_interval_weekday$time_interval, steps_per_interval_weekday$average_number_of_steps, type="l", xlab="Minute of a Day", ylab="Average Number of Steps", col="blue")
+lines(steps_per_interval_weekend$time_interval, steps_per_interval_weekend$average_number_of_steps, type="l", xlab="Minute of a Day", ylab="Average Number of Steps", col="red")
+legend("topright", legend = c("Weekdays", "Weekend"), col = c("blue", "red"), lty = 1, cex = 0.8)
+```
+
+#### CONCLUSION: On weekends, activity starts later and is more evenly distributed throughout the day.
